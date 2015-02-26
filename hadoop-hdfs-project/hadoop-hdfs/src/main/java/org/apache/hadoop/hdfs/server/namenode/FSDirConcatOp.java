@@ -127,9 +127,14 @@ class FSDirConcatOp {
         throw new HadoopIllegalArgumentException("concat: the src file " + src
             + " is the same with the target file " + targetIIP.getPath());
       }
-      if(srcINodeFile.isUnderConstruction() || srcINodeFile.numBlocks() == 0) {
+      if (srcINodeFile.isUnderConstruction() || srcINodeFile.numBlocks() == 0) {
         throw new HadoopIllegalArgumentException("concat: source file " + src
             + " is invalid or empty or underConstruction");
+      }
+      // TODO currently we do not support concatenating EC files
+      if (srcINodeFile.isStriped()) {
+        throw new HadoopIllegalArgumentException("concat: the src file " + src
+            + " is with striped blocks");
       }
       si.add(srcINodeFile);
     }
@@ -206,7 +211,7 @@ class FSDirConcatOp {
     int count = 0;
     for (INodeFile nodeToRemove : srcList) {
       if(nodeToRemove != null) {
-        nodeToRemove.setBlocks(null);
+        nodeToRemove.setContiguousBlocks(null);
         nodeToRemove.getParent().removeChild(nodeToRemove);
         fsd.getINodeMap().remove(nodeToRemove);
         count++;
