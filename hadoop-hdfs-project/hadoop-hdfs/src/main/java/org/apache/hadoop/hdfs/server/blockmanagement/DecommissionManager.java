@@ -545,7 +545,7 @@ public class DecommissionManager {
       int underReplicatedInOpenFiles = 0;
       while (it.hasNext()) {
         numBlocksChecked++;
-        final BlockInfoContiguous block = it.next();
+        final BlockInfo block = it.next();
         // Remove the block from the list if it's no longer in the block map,
         // e.g. the containing file has been deleted
         if (blockManager.blocksMap.getStoredBlock(block) == null) {
@@ -579,8 +579,9 @@ public class DecommissionManager {
         }
 
         // Even if the block is under-replicated, 
-        // it doesn't block decommission if it's sufficiently replicated 
-        if (isSufficientlyReplicated(block, bc, num)) {
+        // it doesn't block decommission if it's sufficiently replicated
+        BlockInfoContiguous blk = (BlockInfoContiguous) block;
+        if (isSufficientlyReplicated(blk, bc, num)) {
           if (pruneSufficientlyReplicated) {
             it.remove();
           }
@@ -589,7 +590,7 @@ public class DecommissionManager {
 
         // We've found an insufficiently replicated block.
         if (insufficientlyReplicated != null) {
-          insufficientlyReplicated.add(block);
+          insufficientlyReplicated.add(blk);
         }
         // Log if this is our first time through
         if (firstReplicationLog) {

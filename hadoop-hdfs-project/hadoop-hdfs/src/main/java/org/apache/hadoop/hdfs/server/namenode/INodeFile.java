@@ -85,7 +85,7 @@ public class INodeFile extends INodeWithAdditionalFields
    */
   static enum HeaderFormat {
     PREFERRED_BLOCK_SIZE(null, 48, 1),
-    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 12, 1),
+    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 12, 0),
     STORAGE_POLICY_ID(REPLICATION.BITS, BlockStoragePolicySuite.ID_BIT_LENGTH,
         0);
 
@@ -260,10 +260,10 @@ public class INodeFile extends INodeWithAdditionalFields
   public void setBlock(int index, BlockInfo blk) {
     FileWithStripedBlocksFeature sb = getStripedBlocksFeature();
     if (sb == null) {
-      assert blk instanceof BlockInfoContiguous;
+      assert !blk.isStriped();
       this.blocks[index] = (BlockInfoContiguous) blk;
     } else {
-      assert blk instanceof BlockInfoStriped;
+      assert blk.isStriped();
       assert hasNoContiguousBlock();
       sb.setBlock(index, (BlockInfoStriped) blk);
     }
@@ -281,12 +281,12 @@ public class INodeFile extends INodeWithAdditionalFields
     final BlockInfo ucBlock;
     FileWithStripedBlocksFeature sb = getStripedBlocksFeature();
     if (sb == null) {
-      assert lastBlock instanceof BlockInfoContiguous;
+      assert !lastBlock.isStriped();
       ucBlock = ((BlockInfoContiguous) lastBlock)
           .convertToBlockUnderConstruction(UNDER_CONSTRUCTION, locations);
     } else {
       assert hasNoContiguousBlock();
-      assert lastBlock instanceof BlockInfoStriped;
+      assert lastBlock.isStriped();
       ucBlock = ((BlockInfoStriped) lastBlock)
           .convertToBlockUnderConstruction(UNDER_CONSTRUCTION, locations);
     }
@@ -545,7 +545,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * add a contiguous block to the block list
    */
-  void addBlock(BlockInfoContiguous newblock) {
+  private void addContiguousBlock(BlockInfoContiguous newblock) {
     if (this.blocks == null) {
       this.setContiguousBlocks(new BlockInfoContiguous[]{newblock});
     } else {
@@ -554,6 +554,19 @@ public class INodeFile extends INodeWithAdditionalFields
       System.arraycopy(this.blocks, 0, newlist, 0, size);
       newlist[size] = newblock;
       this.setContiguousBlocks(newlist);
+    }
+  }
+
+  /** add a striped or contiguous block */
+  void addBlock(BlockInfo newblock) {
+    FileWithStripedBlocksFeature sb = getStripedBlocksFeature();
+    if (sb == null) {
+      assert !newblock.isStriped();
+      addContiguousBlock((BlockInfoContiguous) newblock);
+    } else {
+      assert newblock.isStriped();
+      assert hasNoContiguousBlock();
+      sb.addBlock((BlockInfoStriped) newblock);
     }
   }
 

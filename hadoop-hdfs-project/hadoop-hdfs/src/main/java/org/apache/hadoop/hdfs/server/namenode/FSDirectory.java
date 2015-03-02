@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -410,6 +411,10 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       newiip = addINode(existing, newNode);
+      // TODO: we will no longer use storage policy for "Erasure Coding Zone"
+      if (newiip != null && newNode.isStriped()) {
+        newNode.addStripedBlocksFeature();
+      }
     } finally {
       writeUnlock();
     }
@@ -445,6 +450,10 @@ public class FSDirectory implements Closeable {
     try {
       INodesInPath iip = addINode(existing, newNode);
       if (iip != null) {
+        // TODO: we will no longer use storage policy for "Erasure Coding Zone"
+        if (newNode.isStriped()) {
+          newNode.addStripedBlocksFeature();
+        }
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
         }
@@ -466,7 +475,7 @@ public class FSDirectory implements Closeable {
   /**
    * Add a block to the file. Returns a reference to the added block.
    */
-  BlockInfoContiguous addBlock(String path, INodesInPath inodesInPath,
+  BlockInfo addBlock(String path, INodesInPath inodesInPath,
       Block block, DatanodeStorageInfo[] targets, boolean isStriped)
       throws IOException {
     writeLock();
@@ -478,16 +487,20 @@ public class FSDirectory implements Closeable {
       Preconditions.checkState(fileINode.isUnderConstruction());
 
       // check quota limits and updated space consumed
+      // TODO add quota usage for EC files
       updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
           fileINode.getBlockReplication(), true);
 
       // associate new last block for the file
-      BlockInfoContiguousUnderConstruction blockInfo =
-        new BlockInfoContiguousUnderConstruction(
-            block,
-            numLocations,
-            BlockUCState.UNDER_CONSTRUCTION,
-            targets);
+      final BlockInfo blockInfo;
+      if (isStriped) {
+        blockInfo = new BlockInfoStripedUnderConstruction(block,
+            HdfsConstants.NUM_DATA_BLOCKS, HdfsConstants.NUM_PARITY_BLOCKS,
+            BlockUCState.UNDER_CONSTRUCTION, targets);
+      } else {
+        blockInfo = new BlockInfoContiguousUnderConstruction(block,
+            numLocations, BlockUCState.UNDER_CONSTRUCTION, targets);
+      }
       getBlockManager().addBlockCollection(blockInfo, fileINode);
       fileINode.addBlock(blockInfo);
 
