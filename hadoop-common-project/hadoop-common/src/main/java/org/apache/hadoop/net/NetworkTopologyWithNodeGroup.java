@@ -204,8 +204,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
       if (clusterMap.add(node)) {
         LOG.info("Adding a new node: " + NodeBase.getPath(node));
         if (rack == null) {
-          // We only track rack number here
-          numOfRacks++;
+          racks.add(node.getNetworkLocation());
         }
       }
       if(LOG.isDebugEnabled()) {
@@ -237,7 +236,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
         }
         InnerNode rack = (InnerNode)getNode(nodeGroup.getNetworkLocation());
         if (rack == null) {
-          numOfRacks--;
+          racks.remove(node.getNetworkLocation());
         }
       }
       if(LOG.isDebugEnabled()) {

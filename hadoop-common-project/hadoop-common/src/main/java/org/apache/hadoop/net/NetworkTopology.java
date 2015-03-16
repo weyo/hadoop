@@ -376,8 +376,8 @@ public class NetworkTopology {
   InnerNode clusterMap;
   /** Depth of all leaf nodes */
   private int depthOfAllLeaves = -1;
-  /** rack counter */
-  protected int numOfRacks = 0;
+  
+  protected ArrayList<String> racks = new ArrayList<>();
   /** the lock used to manage access */
   protected ReadWriteLock netlock = new ReentrantReadWriteLock();
 
@@ -417,7 +417,7 @@ public class NetworkTopology {
       if (clusterMap.add(node)) {
         LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
-          numOfRacks++;
+          racks.add(node.getNetworkLocation());
         }
         if (!(node instanceof InnerNode)) {
           if (depthOfAllLeaves == -1) {
@@ -490,7 +490,7 @@ public class NetworkTopology {
       if (clusterMap.remove(node)) {
         InnerNode rack = (InnerNode)getNode(node.getNetworkLocation());
         if (rack == null) {
-          numOfRacks--;
+          racks.remove(node.getNetworkLocation());
         }
       }
       if(LOG.isDebugEnabled()) {
@@ -554,12 +554,24 @@ public class NetworkTopology {
   public String getRack(String loc) {
     return loc;
   }
+
+  /** @return a copy of the array of all the racks. Changing the returned array
+   * will not affect the topology.
+   */
+  public String[] getRacks() {
+    netlock.readLock().lock();
+    try {
+      return racks.toArray(new String[racks.size()]);
+    } finally {
+      netlock.readLock().unlock();
+    }
+  }
   
   /** @return the total number of racks */
   public int getNumOfRacks() {
     netlock.readLock().lock();
     try {
-      return numOfRacks;
+      return racks.size();
     } finally {
       netlock.readLock().unlock();
     }
@@ -807,7 +819,7 @@ public class NetworkTopology {
     // print the number of racks
     StringBuilder tree = new StringBuilder();
     tree.append("Number of racks: ");
-    tree.append(numOfRacks);
+    tree.append(racks.size());
     tree.append("\n");
     // print the number of leaves
     int numOfLeaves = getNumOfLeaves();

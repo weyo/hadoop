@@ -23,7 +23,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -121,6 +123,27 @@ public class TestNetworkTopology {
     assertTrue(cluster.isOnSameRack(dataNodes[3], dataNodes[4]));
     assertFalse(cluster.isOnSameRack(dataNodes[4], dataNodes[5]));
     assertTrue(cluster.isOnSameRack(dataNodes[5], dataNodes[6]));
+    
+    List<String> rackList = Arrays.asList(cluster.getRacks());
+    for (int i = 0; i < dataNodes.length; i++) {
+      assertTrue(rackList.contains(dataNodes[i].getNetworkLocation()));
+    }
+    
+    cluster.remove(dataNodes[0]);
+    rackList = Arrays.asList(cluster.getRacks());
+    //Notice that DN0 and DN1 are on the same rack.
+    for (int i = 0; i < dataNodes.length; i++) {
+      assertTrue(rackList.contains(dataNodes[i].getNetworkLocation()));
+    }
+    
+    cluster.remove(dataNodes[1]);
+    rackList = Arrays.asList(cluster.getRacks());
+    assertFalse(rackList.contains(dataNodes[0].getNetworkLocation()));
+    assertFalse(rackList.contains(dataNodes[1].getNetworkLocation()));
+    for (int i = 2; i < dataNodes.length; i++) {
+      assertTrue(rackList.contains(dataNodes[i].getNetworkLocation()));
+    }
+    
   }
   
   @Test
