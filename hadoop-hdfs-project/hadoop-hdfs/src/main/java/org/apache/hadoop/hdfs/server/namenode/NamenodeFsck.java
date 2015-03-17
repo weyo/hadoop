@@ -244,7 +244,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       }
       BlockCollection bc = bm.getBlockCollection(blockInfo);
       INode iNode = (INode) bc;
-      NumberReplicas numberReplicas= bm.countNodes(block);
+      NumberReplicas numberReplicas= bm.countNodes(blockInfo);
       out.println("Block Id: " + blockId);
       out.println("Block belongs to: "+iNode.getFullPathName());
       out.println("No. of Expected Replica: " + bc.getBlockReplication());
@@ -459,7 +459,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     // Get block locations without updating the file access time 
     // and without block access tokens
     LocatedBlocks blocks = null;
-    FSNamesystem fsn = namenode.getNamesystem();
+    final FSNamesystem fsn = namenode.getNamesystem();
     fsn.readLock();
     try {
       blocks = fsn.getBlockLocations(path, 0, fileLen, false, false).blocks;
@@ -507,8 +507,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       boolean isCorrupt = lBlk.isCorrupt();
       String blkName = block.toString();
       DatanodeInfo[] locs = lBlk.getLocations();
-      NumberReplicas numberReplicas =
-          namenode.getNamesystem().getBlockManager().countNodes(block.getLocalBlock());
+      final BlockManager blockManager = fsn.getBlockManager();
+      final BlockInfo storedBlock = blockManager.getStoredBlock(
+          block.getLocalBlock());
+      NumberReplicas numberReplicas = blockManager.countNodes(storedBlock);
       int liveReplicas = numberReplicas.liveReplicas();
       res.totalReplicas += liveReplicas;
       short targetFileReplication = file.getReplication();
