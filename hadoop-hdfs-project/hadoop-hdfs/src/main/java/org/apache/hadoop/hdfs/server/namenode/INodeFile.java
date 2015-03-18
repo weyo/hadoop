@@ -406,6 +406,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override // BlockCollection
+  // TODO: rename to reflect both replication and EC
   public short getBlockReplication() {
     short max = getFileReplication(CURRENT_STATE_ID);
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
@@ -416,7 +417,8 @@ public class INodeFile extends INodeWithAdditionalFields
       }
       max = maxInSnapshot > max ? maxInSnapshot : max;
     }
-    return max;
+    return isStriped()?
+        HdfsConstants.NUM_DATA_BLOCKS + HdfsConstants.NUM_PARITY_BLOCKS : max;
   }
 
   /** Set the replication factor of this file. */
@@ -1039,11 +1041,12 @@ public class INodeFile extends INodeWithAdditionalFields
         Arrays.asList(snapshotBlocks).contains(block);
   }
 
-  @VisibleForTesting
   /**
    * @return true if the file is in the striping layout.
    */
-  // TODO: move erasure coding policy to file XAttr (HDFS-7337)
+  @VisibleForTesting
+  @Override
+  // TODO: move erasure coding policy to file XAttr
   public boolean isStriped() {
     return getStoragePolicyID() == HdfsConstants.EC_STORAGE_POLICY_ID;
   }
